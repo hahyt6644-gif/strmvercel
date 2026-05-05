@@ -1,13 +1,14 @@
 import { MongoClient } from 'mongodb';
 
-const uri = process.env.MONGODB_URI; // set in Vercel env vars
 let client;
 let db;
 
 export async function getDb() {
   if (db) return db;
-  client = new MongoClient(uri);
+
+  client = new MongoClient(process.env.MONGODB_URI);
   await client.connect();
-  db = client.db(process.env.MONGODB_DB || 'streamit');
+
+  db = client.db(process.env.MONGODB_DB);
   return db;
 }
