@@ -1,14 +1,22 @@
 import { MongoClient } from 'mongodb';
 
+const uri = process.env.MONGODB_URI;
+
 let client;
-let db;
+let clientPromise;
+
+if (!uri) {
+  throw new Error('Missing MONGODB_URI');
+}
+
+if (!global._mongoClientPromise) {
+  client = new MongoClient(uri);
+  global._mongoClientPromise = client.connect();
+}
+
+clientPromise = global._mongoClientPromise;
 
 export async function getDb() {
-  if (db) return db;
-
-  client = new MongoClient(process.env.MONGODB_URI);
-  await client.connect();
-
-  db = client.db(process.env.MONGODB_DB);
-  return db;
+  const client = await clientPromise;
+  return client.db(process.env.MONGODB_DB);
 }
