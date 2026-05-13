@@ -36,7 +36,7 @@ export default async function handler(req, res) {
 
     // Your EarnKaro Token
     const EARNKARO_TOKEN =
-      'YOUR_EKARO_API_TOKEN';
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OWI0ZWI2MDliMTExOWE5ZDUzZDQyM2IiLCJlYXJua2FybyI6IjM4MjY0MDciLCJpYXQiOjE3Nzg2ODY0NTJ9.ConjXiA122viaSxBOEXzKgwEd6gl0V3Tcjykyv1rykU';
 
     // Request to EarnKaro API
     const response = await fetch(
