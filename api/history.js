@@ -34,6 +34,9 @@ export default async function handler(req, res) {
         pos = 63;
         break;
 
+      case 'shopsy':
+        pos = 2;
+        break;
       case 'myntra':
         pos = 111;
         break;
