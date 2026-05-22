@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   const { category = "general" } = req.query;
 
-  const data = [
+  const baseData = [
     {
       title: "Journey of Love 18+ (2023)",
       genre: "Crime, Thriller",
@@ -40,12 +40,21 @@ export default async function handler(req, res) {
     }
   ];
 
+  // Repeat data 20 times
+  const data = Array.from({ length: 20 }, (_, index) =>
+    baseData.map((item) => ({
+      ...item,
+      id: `${index}-${item.title}`, // unique id
+    }))
+  ).flat();
+
   // 🔥 Filter by category
   let filtered = data;
 
   if (category && category !== "general") {
     filtered = data.filter(
-      (item) => item.category?.toLowerCase() === category.toLowerCase()
+      (item) =>
+        item.category?.toLowerCase() === category.toLowerCase()
     );
   }
 
