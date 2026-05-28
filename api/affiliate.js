@@ -25,8 +25,8 @@ export default async function handler(req, res) {
   // Only GET / POST
   // =========================
   if (
-    req.method !== 'POST' &&
-    req.method !== 'GET'
+    req.method !== 'GET' &&
+    req.method !== 'POST'
   ) {
     return res.status(405).json({
       status: 0,
@@ -40,8 +40,6 @@ export default async function handler(req, res) {
 
     // =========================
     // GET SUPPORT
-    // Example:
-    // /api/affiliate?url=https://...
     // =========================
     if (req.method === 'GET') {
       deal =
@@ -58,6 +56,7 @@ export default async function handler(req, res) {
     // =========================
     if (req.method === 'POST') {
       deal = req.body?.deal;
+
       convert_option =
         req.body?.convert_option ||
         'convert_only';
@@ -75,23 +74,10 @@ export default async function handler(req, res) {
     }
 
     // =========================
-    // EarnKaro Token
+    // EarnKaro Token (Prefilled)
     // =========================
     const EARNKARO_TOKEN =
-      process.env.EARNKARO_TOKEN ||
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OWI0ZWI2MDliMTExOWE5ZDUzZDQyM2IiLCJlYXJua2FybyI6IjM4MjY0MDciLCJpYXQiOjE3Nzk5NjI4NjN9.TVDMfcSRj-0Jmb8F84L0FMv8wx3f-Jxs_9ixpsMmGzg';
-
-    if (
-      !EARNKARO_TOKEN ||
-      EARNKARO_TOKEN ===
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OWI0ZWI2MDliMTExOWE5ZDUzZDQyM2IiLCJlYXJua2FybyI6IjM4MjY0MDciLCJpYXQiOjE3Nzk5NjI4NjN9.TVDMfcSRj-0Jmb8F84L0FMv8wx3f-Jxs_9ixpsMmGzg'
-    ) {
-      return res.status(500).json({
-        status: 0,
-        error:
-          'EarnKaro token missing',
-      });
-    }
 
     // =========================
     // Call EarnKaro API
@@ -131,7 +117,7 @@ export default async function handler(req, res) {
     }
 
     // =========================
-    // Extract Converted Link
+    // Extract Affiliate Link
     // =========================
     const convertedDeal =
       result.data || '';
@@ -160,10 +146,7 @@ export default async function handler(req, res) {
         null,
     });
   } catch (error) {
-    console.error(
-      'Affiliate API Error:',
-      error
-    );
+    console.error(error);
 
     return res.status(500).json({
       status: 0,
