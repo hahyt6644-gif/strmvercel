@@ -79,12 +79,12 @@ export default async function handler(req, res) {
     // =========================
     const EARNKARO_TOKEN =
       process.env.EARNKARO_TOKEN ||
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OWI0ZWI2MDliMTExOWE5ZDUzZDQyM2IiLCJlYXJua2FybyI6IjM4MjY0MDciLCJpYXQiOjE3Nzg2ODY0NTJ9.ConjXiA122viaSxBOEXzKgwEd6gl0V3Tcjykyv1rykU';
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OWI0ZWI2MDliMTExOWE5ZDUzZDQyM2IiLCJlYXJua2FybyI6IjM4MjY0MDciLCJpYXQiOjE3Nzk5NjI4NjN9.TVDMfcSRj-0Jmb8F84L0FMv8wx3f-Jxs_9ixpsMmGzg';
 
     if (
       !EARNKARO_TOKEN ||
       EARNKARO_TOKEN ===
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OWI0ZWI2MDliMTExOWE5ZDUzZDQyM2IiLCJlYXJua2FybyI6IjM4MjY0MDciLCJpYXQiOjE3Nzg2ODY0NTJ9.ConjXiA122viaSxBOEXzKgwEd6gl0V3Tcjykyv1rykU'
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OWI0ZWI2MDliMTExOWE5ZDUzZDQyM2IiLCJlYXJua2FybyI6IjM4MjY0MDciLCJpYXQiOjE3Nzk5NjI4NjN9.TVDMfcSRj-0Jmb8F84L0FMv8wx3f-Jxs_9ixpsMmGzg'
     ) {
       return res.status(500).json({
         status: 0,
