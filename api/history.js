@@ -1,303 +1,364 @@
 // File: /api/history.js
 
-export default async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+const MARKET_POS = {
+  flipkart: 2,
+  shopsy: 2,
+  amazon: 63,
+  myntra: 111,
+  ajio: 2191,
+  croma: 71,
+  nykaa: 1830,
+  meesho: 7376,
+  tatacliq: 2190,
+  nykaafashion: 6068,
+  healthkart: 921,
+  netmeds: 2238,
+  purplle: 900,
+  onemg: 2237,
+  lenskart: 57,
+  jiomart: 6660,
+  reliancedigital: 6607,
+  vijaysales: 6645,
+  snapdeal: 129,
+  shopclues: 421,
+  firstcry: 2265,
+};
 
-  // Handle OPTIONS request
+const DOMAIN_MAP = {
+  'flipkart.com': 2,
+  'dl.flipkart.com': 2,
+  'shopsy.in': 2,
+
+  'amazon.in': 63,
+  'amazon.com': 6326,
+
+  'myntra.com': 111,
+  'ajio.com': 2191,
+  'croma.com': 71,
+  'nykaa.com': 1830,
+  'nykaafashion.com': 6068,
+  'meesho.com': 7376,
+  'tatacliq.com': 2190,
+  'healthkart.com': 921,
+  'netmeds.com': 2238,
+  'purplle.com': 900,
+  '1mg.com': 2237,
+  'lenskart.com': 57,
+  'jiomart.com': 6660,
+  'reliancedigital.in': 6607,
+  'vijaysales.com': 6645,
+  'snapdeal.com': 129,
+  'shopclues.com': 421,
+  'firstcry.com': 2265,
+};
+
+export default async function handler(req, res) {
+  // =========================
+  // CORS
+  // =========================
+  res.setHeader(
+    'Access-Control-Allow-Origin',
+    '*'
+  );
+
+  res.setHeader(
+    'Access-Control-Allow-Methods',
+    'GET, OPTIONS'
+  );
+
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type'
+  );
+
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
   try {
-    // Query params
-    const {
+    let {
       pid,
-      market = 'flipkart',
+      market,
+      pos,
+      url,
     } = req.query;
+
+    // =========================
+    // URL SUPPORT
+    // =========================
+    if (url) {
+      try {
+        const parsedUrl = new URL(url);
+
+        const hostname =
+          parsedUrl.hostname.replace(
+            'www.',
+            ''
+          );
+
+        // Auto detect POS
+        if (!pos) {
+          pos = DOMAIN_MAP[hostname];
+        }
+
+        // Extract PID
+        if (!pid) {
+          pid =
+            parsedUrl.searchParams.get(
+              'pid'
+            );
+
+          // Amazon fallback
+          if (
+            !pid &&
+            hostname.includes(
+              'amazon'
+            )
+          ) {
+            const match =
+              parsedUrl.pathname.match(
+                /\/dp\/([A-Z0-9]{10})/i
+              );
+
+            if (match) {
+              pid = match[1];
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    // =========================
+    // DIRECT POS SUPPORT
+    // =========================
+    if (pos) {
+      pos = Number(pos);
+    }
+
+    // =========================
+    // MARKET FALLBACK
+    // =========================
+    if (!pos && market) {
+      pos =
+        MARKET_POS[
+          market.toLowerCase()
+        ];
+    }
+
+    // Default Flipkart
+    if (!pos) {
+      pos = 2;
+    }
 
     // Validation
     if (!pid) {
       return res.status(400).json({
         status: 0,
-        error: 'pid is required',
+        error:
+          'pid is required',
       });
     }
 
-    // Market to POS mapping
-    let pos = 2;
-
-    switch (market.toLowerCase()) {
-      case 'amazon':
-        pos = 63;
-        break;
-
-      case 'shopsy':
-        pos = 2;
-        break;
-      case 'myntra':
-        pos = 111;
-        break;
-
-      case 'ajio':
-        pos = 2191;
-        break;
-
-      case 'croma':
-        pos = 71;
-        break;
-
-      case 'nykaa':
-        pos = 1830;
-        break;
-
-      case 'meesho':
-        pos = 7376;
-        break;
-
-      case 'flipkart':
-      default:
-        pos = 2;
-        break;
-    }
-
-    // Graph API URL
+    // =========================
+    // API URL
+    // =========================
     const apiUrl =
-      `https://graph.bitbns.com/getPredictedData.php?pos=${pos}&pid=${encodeURIComponent(pid)}`;
+      `https://graph.bitbns.com/getPredictedData.php?pos=${pos}&pid=${encodeURIComponent(
+        pid
+      )}`;
 
-    // Fetch graph data
-    const response = await fetch(apiUrl);
+    // =========================
+    // FETCH DATA
+    // =========================
+    const response =
+      await fetch(apiUrl);
 
-    // Validate response
     if (!response.ok) {
       return res.status(500).json({
         status: 0,
-        error: 'Failed to fetch history data',
+        error:
+          'Failed to fetch history',
       });
     }
 
-    // Raw response
-    const rawData = await response.text();
+    const rawData =
+      await response.text();
 
-    // Empty response
-    if (!rawData || rawData.length < 10) {
+    if (
+      !rawData ||
+      rawData.length < 10
+    ) {
       return res.status(404).json({
         status: 0,
-        error: 'No history data found',
+        error:
+          'No history found',
       });
     }
 
-    /*
-      Format:
-      date~price*~*date~price*~*
-      &~&~100&~&~50&~&~50
-    */
+    // =========================
+    // PARSE DATA
+    // =========================
+    const splitData =
+      rawData.split('&~&~');
 
-    // Split metadata
-    const splitData = rawData.split('&~&~');
+    const historyString =
+      splitData[0];
 
-    // Main history string
-    const historyString = splitData[0];
+    const entries =
+      historyString
+        .split('*~*')
+        .filter(Boolean);
 
-    // Split entries
-    const entries = historyString
-      .split('*~*')
-      .filter((item) => item.trim() !== '');
+    const history =
+      entries.map((entry) => {
+        const parts =
+          entry.split('~');
 
-    // Parse history
-    const history = entries.map((entry) => {
-      const parts = entry.split('~');
+        return {
+          date:
+            parts[0] || '',
+          price:
+            Number(
+              parts[1]
+            ) || 0,
+        };
+      });
 
-      return {
-        date: parts[0] || '',
-        price: Number(parts[1]) || 0,
-      };
-    });
-
-    // No valid history
-    if (history.length === 0) {
+    if (!history.length) {
       return res.status(404).json({
         status: 0,
-        error: 'Invalid history data',
+        error:
+          'Invalid history data',
       });
     }
 
-    // Price calculations
-    const prices = history.map((item) => item.price);
+    // =========================
+    // ANALYTICS
+    // =========================
+    const prices =
+      history.map(
+        (item) =>
+          item.price
+      );
 
-    const lowestPrice = Math.min(...prices);
-    const highestPrice = Math.max(...prices);
+    const lowestPrice =
+      Math.min(...prices);
+
+    const highestPrice =
+      Math.max(...prices);
 
     const currentPrice =
-      history[history.length - 1]?.price || 0;
+      history[
+        history.length - 1
+      ]?.price || 0;
 
     const averagePrice =
-      prices.reduce((sum, price) => sum + price, 0) /
-      prices.length;
+      prices.reduce(
+        (a, b) => a + b,
+        0
+      ) / prices.length;
 
-    // Trend calculation
-    const firstPrice = history[0]?.price || 0;
+    const firstPrice =
+      history[0]?.price || 0;
 
     let trend = 'Stable';
 
-    if (currentPrice < firstPrice) {
-      trend = 'Decreasing';
-    } else if (currentPrice > firstPrice) {
-      trend = 'Increasing';
+    if (
+      currentPrice <
+      firstPrice
+    ) {
+      trend =
+        'Decreasing';
+    } else if (
+      currentPrice >
+      firstPrice
+    ) {
+      trend =
+        'Increasing';
     }
 
-    // Volatility calculation
     const volatilityPercent =
-      ((highestPrice - lowestPrice) / lowestPrice) * 100;
+      lowestPrice > 0
+        ? ((highestPrice -
+            lowestPrice) /
+            lowestPrice) *
+          100
+        : 0;
 
-    let volatility = 'Low';
+    let volatility =
+      'Low';
 
-    if (volatilityPercent > 40) {
-      volatility = 'High';
-    } else if (volatilityPercent > 15) {
-      volatility = 'Medium';
+    if (
+      volatilityPercent >
+      40
+    ) {
+      volatility =
+        'High';
+    } else if (
+      volatilityPercent >
+      15
+    ) {
+      volatility =
+        'Medium';
     }
 
-    // Buy score
-    const buyScore = Math.max(
-      1,
-      Math.min(
-        100,
-        Math.round(
-          ((highestPrice - currentPrice) /
-            highestPrice) *
-            100
+    const buyScore =
+      Math.max(
+        1,
+        Math.min(
+          100,
+          Math.round(
+            ((highestPrice -
+              currentPrice) /
+              highestPrice) *
+              100
+          )
         )
-      )
-    );
+      );
 
-    // Response
+    // =========================
+    // RESPONSE
+    // =========================
     return res.status(200).json({
       status: 1,
 
-      market,
       pid,
+      pos,
 
-      current_price: currentPrice,
+      current_price:
+        currentPrice,
 
-      lowest_price: lowestPrice,
+      lowest_price:
+        lowestPrice,
 
-      highest_price: highestPrice,
+      highest_price:
+        highestPrice,
 
-      average_price: Number(
-        averagePrice.toFixed(2)
-      ),
+      average_price:
+        Number(
+          averagePrice.toFixed(
+            2
+          )
+        ),
 
       trend,
 
       volatility,
 
-      buy_score: buyScore,
+      buy_score:
+        buyScore,
 
-      total_records: history.length,
+      total_records:
+        history.length,
 
       history,
     });
   } catch (error) {
     return res.status(500).json({
       status: 0,
-      error: error.message || 'Internal server error',
+      error:
+        error.message ||
+        'Internal server error',
     });
   }
 }
-
-/*
-
-==================================================
-HOW TO USE
-==================================================
-
-1. Create file:
-
-/api/history.js
-
-2. Paste this code
-
-3. Deploy to Vercel
-
-==================================================
-API URL
-==================================================
-
-https://yourdomain.vercel.app/api/history
-
-==================================================
-PARAMETERS
-==================================================
-
-?pid=DEOHDTFQMG9MJWZZ
-&market=flipkart
-
-==================================================
-EXAMPLES
-==================================================
-
-Flipkart:
-https://yourdomain.vercel.app/api/history?pid=DEOHDTFQMG9MJWZZ&market=flipkart
-
-Amazon:
-https://yourdomain.vercel.app/api/history?pid=B07Z3MN8K1&market=amazon
-
-==================================================
-RESPONSE
-==================================================
-
-{
-  "status": 1,
-  "market": "flipkart",
-  "pid": "DEOHDTFQMG9MJWZZ",
-
-  "current_price": 19398,
-
-  "lowest_price": 5114,
-
-  "highest_price": 26398,
-
-  "average_price": 20844.23,
-
-  "trend": "Decreasing",
-
-  "volatility": "High",
-
-  "buy_score": 27,
-
-  "total_records": 150,
-
-  "history": [
-    {
-      "date": "2025-07-23 04:35:11",
-      "price": 16274.59
-    }
-  ]
-}
-
-==================================================
-FRONTEND USAGE
-==================================================
-
-Use:
-history[]
-
-for charts.
-
-Use:
-- current_price
-- lowest_price
-- highest_price
-- average_price
-- trend
-- volatility
-- buy_score
-
-for product analytics cards.
-
-==================================================
-
-*/
