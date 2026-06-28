@@ -1,5 +1,3 @@
-// api/compare.js
-
 export default async function handler(req, res) {
   const { q } = req.query;
 
@@ -9,46 +7,30 @@ export default async function handler(req, res) {
     });
   }
 
-  const apiUrl =
-    `https://pricee.com/api/v1/search.php?q=${encodeURIComponent(q)}&size=10&lang=en&vuid=0&platform=2`;
+  const apiUrl = `https://pricee.com/api/v1/search.php?q=${encodeURIComponent(q)}&size=10&lang=en&vuid=0&platform=2`;
 
   try {
-    const response = await fetch(apiUrl);
+    const response = await fetch(apiUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0"
+      }
+    });
 
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: "Failed to fetch Pricee API"
-      });
-    }
+    const data = await response.json();
 
-    const json = await response.json();
+    if (Array.isArray(data.data)) {
+      data.data = data.data.map(item => {
+        let product_url = item.url || null;
 
-    if (Array.isArray(json.data)) {
-      json.data = json.data.map(item => {
-        let product_url = null;
-
-        switch ((item.source_name || "").toLowerCase()) {
-
-          // Amazon
-          case "amazon": {
-            const asin = item.id.split("-")[1]?.toUpperCase();
-
-            if (asin) {
-              product_url = `https://www.amazon.in/dp/${asin}`;
-            }
-            break;
+        if ((item.source_name || "").toLowerCase() === "amazon") {
+          const asin = item.id.split("-")[1]?.toUpperCase();
+          if (asin) {
+            product_url = `https://www.amazon.in/dp/${asin}`;
           }
+        }
 
-          // Flipkart
-          case "flipkart": {
-            product_url = `https://www.flipkart.com/search?q=${encodeURIComponent(item.title)}`;
-            break;
-          }
-
-          // Default
-          default: {
-            product_url = item.url || null;
-          }
+        if ((item.source_name || "").toLowerCase() === "flipkart") {
+          product_url = `https://www.flipkart.com/search?q=${encodeURIComponent(item.title)}`;
         }
 
         return {
@@ -58,13 +40,12 @@ export default async function handler(req, res) {
       });
     }
 
-    res.setHeader("Content-Type", "application/json");
-    res.status(200).json(json);
+    res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate");
+    res.status(200).json(data);
 
   } catch (err) {
     res.status(500).json({
-      error: "Internal Server Error",
-      message: err.message
+      error: err.message
     });
   }
 }
