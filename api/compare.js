@@ -1,7 +1,13 @@
 // api/compare.js
 
 export default async function handler(req, res) {
-  const { q } = req.query;
+  const {
+    q,
+    size = 10,
+    lang = "en",
+    vuid = 0,
+    platform = 2
+  } = req.query;
 
   if (!q) {
     return res.status(400).json({
@@ -10,7 +16,12 @@ export default async function handler(req, res) {
   }
 
   const apiUrl =
-    `https://pricee.com/api/v1/search.php?q=${encodeURIComponent(q)}&size=10&lang=en&vuid=0&platform=2`;
+    `https://pricee.com/api/v1/search.php` +
+    `?q=${encodeURIComponent(q)}` +
+    `&size=${encodeURIComponent(size)}` +
+    `&lang=${encodeURIComponent(lang)}` +
+    `&vuid=${encodeURIComponent(vuid)}` +
+    `&platform=${encodeURIComponent(platform)}`;
 
   try {
     const response = await fetch(apiUrl, {
@@ -28,55 +39,38 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (Array.isArray(data.data)) {
-      data.data = await Promise.all(
+      await Promise.all(
         data.data.map(async (item) => {
-          let product_url = item.url || null;
+          item.product_url = item.url;
 
-          try {
-            // Follow Pricee redirect to final marketplace URL
-            const redirect = await fetch(item.url, {
-              method: "GET",
-              redirect: "follow",
-              headers: {
-                "User-Agent": "Mozilla/5.0"
-              }
-            });
+          if (item.url) {
+            try {
+              const redirect = await fetch(item.url, {
+                method: "GET",
+                redirect: "follow",
+                headers: {
+                  "User-Agent": "Mozilla/5.0"
+                }
+              });
 
-            product_url = redirect.url;
-
-            // If Amazon redirect fails, generate direct ASIN URL
-            if (
-              item.source_name?.toLowerCase() === "amazon" &&
-              (!product_url || product_url.includes("pricee.com"))
-            ) {
-              const asin = item.id.split("-")[1]?.toUpperCase();
-              if (asin) {
-                product_url = `https://www.amazon.in/dp/${asin}`;
-              }
-            }
-          } catch {
-            // Fallback
-            if (item.source_name?.toLowerCase() === "amazon") {
-              const asin = item.id.split("-")[1]?.toUpperCase();
-              if (asin) {
-                product_url = `https://www.amazon.in/dp/${asin}`;
-              }
+              item.product_url = redirect.url;
+            } catch {
+              item.product_url = item.url;
             }
           }
-
-          return {
-            ...item,
-            product_url
-          };
         })
       );
     }
 
-    res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate");
-    res.status(200).json(data);
+    res.setHeader(
+      "Cache-Control",
+      "s-maxage=300, stale-while-revalidate"
+    );
+
+    return res.status(200).json(data);
 
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       error: "Internal Server Error",
       message: err.message
     });
